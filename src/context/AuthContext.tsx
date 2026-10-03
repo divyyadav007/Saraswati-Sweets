@@ -181,7 +181,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             {
               id: data.user.id,
               phone: formattedPhone,
-              full_name: fullName?.trim() || (data.user.user_metadata?.full_name as string) || `Patron ${cleanPhone.slice(-4)}`,
+              full_name: fullName?.trim() || (data.user.user_metadata?.full_name as string) || '',
               role: 'CUSTOMER',
             },
             jwt

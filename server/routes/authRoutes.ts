@@ -66,7 +66,8 @@ router.post('/sync', async (req: AuthenticatedRequest, res: Response) => {
   const formattedPhone = cleanPhone ? `+91 ${cleanPhone.slice(0, 5)} ${cleanPhone.slice(5)}` : phone;
 
   const assignedRole = role || (email?.includes('admin') ? 'ADMIN' : email?.includes('staff') ? 'STAFF' : 'CUSTOMER');
-  const displayName = full_name?.trim() || (cleanPhone ? `Patron ${cleanPhone.slice(-4)}` : email ? email.split('@')[0] : 'Valued Patron');
+  // Bug #2 Fix: Never generate a placeholder name.
+  const displayName = full_name?.trim() || (email ? email.split('@')[0] : '');
 
   const profileData: ServerProfile = {
     id,
@@ -154,7 +155,7 @@ router.post('/demo-login', async (req, res) => {
         const { data: authData, error: authErr } = await supabaseServer.auth.admin.createUser({
           phone: formattedPhoneToSearch,
           phone_confirm: true,
-          user_metadata: { full_name: req.body.full_name || 'Valued Patron' }
+          user_metadata: { full_name: req.body.full_name || '' }
         });
         if (authData?.user) {
           userId = authData.user.id;
@@ -179,7 +180,9 @@ router.post('/demo-login', async (req, res) => {
       profile = {
         id: userId,
         phone: formattedPhone,
-        full_name: providedName || `Patron ${cleanPhone.slice(-4)}`,
+        // Bug #2 Fix: Never generate a placeholder name. If no real name provided, store empty string.
+        // This ensures the checkout recipient name field stays blank, not pre-filled with "Patron XXXX".
+        full_name: providedName || '',
         role: 'CUSTOMER',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

@@ -526,7 +526,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onGoToLogin
       const data = await res.json();
       if (res.ok) {
         setOrders((prev) => prev.map((o) => (o.id === refundOrderTarget.id ? data.order : o)));
-        showToast(`Refund of ₹${refundOrderTarget.total} processed successfully!`, 'success');
+        showToast(`Refund of ₹${refundOrderTarget.total_amount} processed successfully!`, 'success');
         setRefundOrderTarget(null);
         loadAllAdminData(true);
       } else {
@@ -1515,8 +1515,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onGoToLogin
                         </span>
                       </div>
 
-                      <div className="text-sm font-bold text-[#1F1B16]">
-                        {formatINR(order.total)}
+                    <div className="text-sm font-bold text-[#1F1B16]">
+                        {/* Bug #3 Fix: was order.total (always 0), must use order.total_amount */}
+                        {formatINR(order.total_amount)}
                       </div>
                     </div>
 
@@ -1525,6 +1526,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onGoToLogin
                       {order.address_snapshot?.recipient_phone}) • Destination:{' '}
                       {order.address_snapshot?.street_address}, {order.address_snapshot?.pincode}
                     </div>
+
+                    {/* Bug #4 Fix: Show delivery slot date and time window */}
+                    {order.slot_snapshot && (
+                      <div className="text-xs text-[#8A1538] font-semibold flex items-center gap-1">
+                        <span>🕐</span>
+                        <span>
+                          Delivery: {order.slot_snapshot.slot_date} &bull; {order.slot_snapshot.start_time}–{order.slot_snapshot.end_time}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="text-xs text-[#1F1B16] font-medium">
                       Items:{' '}
@@ -2862,7 +2873,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onGoToLogin
                 Refund Order #{refundOrderTarget.order_number}?
               </h3>
               <p className="text-xs text-[#6B6258] leading-relaxed">
-                This will trigger the Razorpay Refunds API for <strong>{formatINR(refundOrderTarget.total)}</strong> back to the customer's account and transition order status to <strong>REFUNDED</strong>.
+                This will trigger the Razorpay Refunds API for <strong>{formatINR(refundOrderTarget.total_amount)}</strong> back to the customer's account and transition order status to <strong>REFUNDED</strong>.
               </p>
             </div>
 

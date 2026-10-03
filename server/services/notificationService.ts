@@ -186,10 +186,13 @@ export function addInAppNotification(params: {
  * 1. Notify Order Placed (to Customer and Store Owner)
  */
 export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
-  const customerEmail =
-    order.address_snapshot.recipient_phone ? `${order.address_snapshot.recipient_phone}@sms.saraswatisweets.in` : undefined;
-  const targetEmail = order.guest_email || customerEmail || 'customer@saraswatisweets.in';
+  // Bug #5 Fix: Determine the correct customer contact.
+  // Priority: real guest_email → fall back to store owner notification only (no fake phone emails).
+  const realCustomerEmail = order.guest_email || undefined;
   const targetUserId = order.user_id || order.guest_phone || order.address_snapshot.recipient_phone;
+  const customerPhone = order.address_snapshot.recipient_phone || order.guest_phone || 'N/A';
+
+  console.log(`[notifyOrderPlaced] Order #${order.order_number} | customer email: ${realCustomerEmail || '(none — phone user)'} | phone: ${customerPhone}`);
 
   // In-app notification for Customer
   if (targetUserId) {
@@ -227,8 +230,11 @@ export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
     )
     .join('');
 
-  await emailProvider.sendEmail({
-    to: targetEmail,
+  // Send transactional email to customer only if we have a real email address.
+  // Phone-only users won't have an email — skip rather than sending to a fake address.
+  if (realCustomerEmail) {
+    await emailProvider.sendEmail({
+      to: realCustomerEmail,
     subject: `Order Confirmation #${order.order_number} - Saraswati Sweets (Barabanki)`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1F1B16;">
@@ -270,9 +276,10 @@ export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
         </div>
       </div>
     `,
-  });
+    });
+  } // end if (realCustomerEmail)
 
-  // Transactional Email to Store Owner
+  // Transactional Email to Store Owner — always fires regardless of customer email availability
   await emailProvider.sendEmail({
     to: STORE_SETTINGS.store_email || 'order@saraswatisweets.in',
     subject: `[NEW ORDER ALERT] #${order.order_number} - ₹${order.total_amount} (${order.payment_method})`,

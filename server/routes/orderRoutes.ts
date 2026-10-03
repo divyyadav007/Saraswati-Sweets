@@ -248,7 +248,7 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
       subtotal += itemTotalPrice;
 
       orderItemsSnapshots.push({
-        id: `oi-${Math.random().toString(36).slice(2, 9)}`,
+        id: randomUUID(),
         order_id: orderId,
         product_id: hamper.id,
         variant_id: `hamper-var-${hamper.id}`,
@@ -294,7 +294,7 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
     subtotal += itemTotalPrice;
 
     orderItemsSnapshots.push({
-      id: `oi-${Math.random().toString(36).slice(2, 9)}`,
+      id: randomUUID(),
       order_id: orderId,
       product_id: variant.productId,
       variant_id: variant.id,
@@ -464,7 +464,27 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
     res.status(503).json({ error: 'DB_UNAVAILABLE', message: 'Database not available' });
     return;
   }
-  
+
+  // Bug #1 Fix: Ensure the user profile row exists in Supabase BEFORE inserting the order.
+  // Without this, `orders.user_id` FK references a Supabase auth uid that has no row in `profiles`,
+  // causing "insert or update on table orders violates foreign key constraint orders_user_id_fkey".
+  const profileToUpsert = {
+    id: verifiedUserId,
+    phone: req.user.phone || newOrder.guest_phone || undefined,
+    email: req.user.email || newOrder.guest_email || undefined,
+    full_name: req.user.full_name || address.recipient_name,
+    role: req.user.role || 'CUSTOMER',
+    created_at: req.user.created_at || nowIso,
+    updated_at: nowIso,
+  };
+  const { error: profileErr } = await supabaseServer
+    .from('profiles')
+    .upsert(profileToUpsert, { onConflict: 'id' });
+  if (profileErr) {
+    console.error('[Order] Profile upsert failed before order insert:', profileErr);
+    // Non-fatal if profile already exists — the FK may still resolve. Log and continue.
+  }
+
   // Write direct to Supabase
   const orderRow = {
     id: orderId,
@@ -501,13 +521,14 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
   const orderItemsRows = orderItemsSnapshots.map(it => ({
     id: it.id,
     order_id: orderId,
-    product_id: it.product_id || null,
-    variant_id: it.variant_id || null,
-    product_name: it.product_name,
-    variant_label: it.variant_label,
+    item_type: it.item_type || 'PRODUCT',
+    product_variant_id: it.item_type === 'HAMPER' ? null : (it.variant_id || null),
+    gift_hamper_id: it.item_type === 'HAMPER' ? (it.product_id || null) : null,
+    product_name_snapshot: it.product_name,
+    variant_label_snapshot: it.variant_label,
     unit_price: it.unit_price,
     quantity: it.quantity,
-    total_price: it.total_price
+    line_total: it.total_price
   }));
   
   if (orderItemsRows.length > 0) {

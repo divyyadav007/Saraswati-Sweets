@@ -42,7 +42,7 @@ export async function authenticateToken(
             id: user.id,
             email: user.email,
             phone: user.phone,
-            full_name: (user.user_metadata?.full_name as string) || (user.phone ? `Customer ${user.phone.slice(-4)}` : 'Valued Customer'),
+            full_name: (user.user_metadata?.full_name as string) || (''),
             role: (user.user_metadata?.role as any) || (user.email?.includes('admin') ? 'ADMIN' : user.email?.includes('staff') ? 'STAFF' : 'CUSTOMER'),
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -101,7 +101,7 @@ export async function authenticateToken(
           email: token.includes('admin') ? 'admin@saraswatisweets.in' : token.includes('staff') ? 'staff@saraswatisweets.in' : undefined,
           full_name: isStaffOrAdmin
             ? (token.includes('admin') ? 'Shop Owner (Admin)' : 'Store Staff')
-            : (cleanPhone ? `Patron ${cleanPhone.slice(-4)}` : 'Valued Patron'),
+            : (''),
           role: (token.includes('admin') ? 'ADMIN' : token.includes('staff') ? 'STAFF' : 'CUSTOMER') as 'ADMIN' | 'STAFF' | 'CUSTOMER',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -147,7 +147,7 @@ export async function authenticateToken(
               id: userId,
               phone: decoded.phone || (decoded.user_metadata?.phone as string),
               email: decoded.email,
-              full_name: decoded.user_metadata?.full_name || decoded.full_name || 'Valued Customer',
+              full_name: decoded.user_metadata?.full_name || decoded.full_name || '',
               role: decoded.role === 'service_role' || decoded.email?.includes('admin') ? 'ADMIN' : 'CUSTOMER',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),

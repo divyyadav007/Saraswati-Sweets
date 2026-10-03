@@ -47,7 +47,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
   // Inline address creation state (for guest or when user has no saved address)
   const [guestAddress, setGuestAddress] = useState({
-    recipient_name: user?.full_name || '',
+    // Bug #2 fix: Start recipient_name blank; the useEffect below will pre-fill only if user has a real name.
+    recipient_name: '',
     recipient_phone: user?.phone ? user.phone.replace(/\D/g, '').slice(-10) : '',
     street_address: '',
     landmark: '',
@@ -62,7 +63,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     if (user) {
       setGuestAddress((prev) => ({
         ...prev,
-        recipient_name: prev.recipient_name || user.full_name || '',
+        // Bug #2 fix: only pre-fill name if user has a real non-empty name saved
+        recipient_name: prev.recipient_name || (user.full_name && user.full_name.trim() ? user.full_name.trim() : ''),
         recipient_phone: prev.recipient_phone || (user.phone ? user.phone.replace(/\D/g, '').slice(-10) : ''),
       }));
     }
