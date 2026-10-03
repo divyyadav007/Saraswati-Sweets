@@ -130,7 +130,8 @@ router.get('/overview', (req: AuthenticatedRequest, res: Response) => {
 // 2. IMAGE UPLOAD
 // ==========================================================
 router.post('/upload-image', async (req: AuthenticatedRequest, res: Response) => {
-  const { dataUrl, fileName = 'mithai-image.jpg', fileType = 'image/jpeg', fileSize = 0 } = req.body;
+  if (!assertSupabase(res)) return;
+  const { dataUrl, fileName = 'mithai-image.jpg', fileType = 'image/jpeg', fileSize = 0, path } = req.body;
 
   if (!dataUrl) {
     res.status(400).json({ error: 'MISSING_DATA', message: 'No image data provided.' });
@@ -157,16 +158,38 @@ router.post('/upload-image', async (req: AuthenticatedRequest, res: Response) =>
     return;
   }
 
+  const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+  const buffer = Buffer.from(base64Data, 'base64');
+  const uploadPath = path || `products/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+  const { data, error } = await supabaseServer!.storage
+    .from('product-images')
+    .upload(uploadPath, buffer, {
+      contentType: fileType,
+      upsert: true
+    });
+
+  if (error) {
+    console.error('Storage upload error:', error);
+    res.status(500).json({ error: 'UPLOAD_FAILED', message: error.message });
+    return;
+  }
+
+  const { data: { publicUrl } } = supabaseServer!.storage
+    .from('product-images')
+    .getPublicUrl(uploadPath);
+
   logAuditEvent(req.user, 'PRODUCT_IMAGE_UPLOADED', 'PRODUCT', 'media', {
     fileName,
     fileType,
     fileSize,
+    publicUrl
   });
 
   res.json({
     success: true,
     message: 'Primary sweet image uploaded successfully.',
-    imageUrl: dataUrl,
+    imageUrl: publicUrl,
     fileName,
   });
 });
@@ -354,13 +377,17 @@ router.post('/products', requireRole(['ADMIN']), async (req: AuthenticatedReques
 
   // Write primary image to product_images table
   const imageId = randomUUID();
-  await supabaseServer!.from('product_images').insert([{
+  const storagePathMatch = finalImageUrl.split('/product-images/');
+  const storagePath = storagePathMatch.length > 1 ? storagePathMatch[1] : '';
+  const { error: imgErr } = await supabaseServer!.from('product_images').insert([{
     id: imageId,
     product_id: id,
-    image_url: finalImageUrl,
+    url: finalImageUrl,
+    storage_path: storagePath,
     is_primary: true,
     display_order: 0,
   }]);
+  if (imgErr) console.error('[Admin] Product image insert failed:', imgErr);
 
   // Write variants to product_variants table
   const createdVariants: MasterVariant[] = [];
@@ -457,8 +484,22 @@ router.put('/products/:id', requireRole(['ADMIN']), async (req: AuthenticatedReq
 
   // Handle image update separately in product_images table
   if (image_url !== undefined) {
-    await supabaseServer!.from('product_images')
-      .upsert({ product_id: id, image_url, is_primary: true, display_order: 0 }, { onConflict: 'product_id,is_primary' });
+    await supabaseServer!.from('product_images').delete().eq('product_id', id).eq('is_primary', true);
+    const storagePathMatch = image_url.split('/product-images/');
+    const storagePath = storagePathMatch.length > 1 ? storagePathMatch[1] : '';
+    const { error: imgErr } = await supabaseServer!.from('product_images').insert([{ 
+      product_id: id, 
+      url: image_url, 
+      storage_path: storagePath,
+      is_primary: true, 
+      display_order: 0 
+    }]);
+    
+    if (imgErr) {
+      console.error('[Admin] Product image update failed:', imgErr);
+      res.status(500).json({ error: 'DB_WRITE_FAILED', message: 'Failed to save product image: ' + imgErr.message });
+      return;
+    }
 
     // Update image on all variants too
     Array.from(inMemoryStore.variants.values())

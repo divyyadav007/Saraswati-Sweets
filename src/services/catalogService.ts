@@ -104,7 +104,10 @@ export const catalogService = {
         const { data, error } = await query;
 
         if (!error && data) {
-          products = data as Product[];
+          products = (data as any[]).map(p => ({
+            ...p,
+            images: p.images ? p.images.map((img: any) => ({ ...img, image_url: img.image_url || img.url })) : []
+          })) as Product[];
           fetchedFromServer = true;
         }
       } catch (err) {
@@ -188,7 +191,11 @@ export const catalogService = {
           .single();
 
         if (!error && data) {
-          return data as Product;
+          const p = data as any;
+          return {
+            ...p,
+            images: p.images ? p.images.map((img: any) => ({ ...img, image_url: img.image_url || img.url })) : []
+          } as Product;
         } else if (error && error.code === 'PGRST116') {
           return null;
         }

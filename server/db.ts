@@ -1393,7 +1393,7 @@ export async function loadStoreState(): Promise<void> {
       const imgMap = new Map();
       if (typeof prodImgs !== 'undefined' && prodImgs.data) {
         prodImgs.data.forEach((img: any) => {
-            if (img.is_primary) imgMap.set(img.product_id, img.image_url);
+            if (img.is_primary) imgMap.set(img.product_id, img.url || img.image_url);
         });
       }
       prods.data.forEach((x: any) => {
