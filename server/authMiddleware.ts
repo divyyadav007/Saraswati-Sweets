@@ -65,9 +65,15 @@ export async function authenticateToken(
     if (token.startsWith('dev-user-') || token.startsWith('demo-')) {
       const isStaffOrAdmin = token.includes('admin') || token.includes('staff');
       let cleanPhone = '';
+      let mockId = '';
 
       if (token.startsWith('dev-user-')) {
-        cleanPhone = token.replace('dev-user-', '').replace(/\D/g, '').slice(-10);
+        const suffix = token.replace('dev-user-', '');
+        if (suffix.includes('-')) {
+          mockId = suffix;
+        } else {
+          cleanPhone = suffix.replace(/\D/g, '').slice(-10);
+        }
       }
 
       let existing = null;
@@ -75,6 +81,8 @@ export async function authenticateToken(
         existing = inMemoryStore.profiles.get('admin-default');
       } else if (token === 'demo-staff-token') {
         existing = inMemoryStore.profiles.get('staff-default');
+      } else if (mockId) {
+        existing = inMemoryStore.profiles.get(mockId);
       } else if (cleanPhone) {
         const formattedPhone = `+91 ${cleanPhone.slice(0, 5)} ${cleanPhone.slice(5)}`;
         existing = Array.from(inMemoryStore.profiles.values()).find(p => p.phone === formattedPhone || p.phone === cleanPhone);
@@ -88,7 +96,7 @@ export async function authenticateToken(
           : (token.includes('phone') ? '+91 91611 10030' : undefined);
 
         existing = {
-          id: randomUUID(),
+          id: (mockId || randomUUID()) as any,
           phone: formattedPhone,
           email: token.includes('admin') ? 'admin@saraswatisweets.in' : token.includes('staff') ? 'staff@saraswatisweets.in' : undefined,
           full_name: isStaffOrAdmin
