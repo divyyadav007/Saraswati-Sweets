@@ -1444,7 +1444,29 @@ export async function loadStoreState(): Promise<void> {
       });
     }
     
-    if (profs.data) { inMemoryStore.profiles.clear(); profs.data.forEach(x => inMemoryStore.profiles.set(x.id, x)); }
+    if (profs.data) {
+      inMemoryStore.profiles.clear();
+      profs.data.forEach(x => inMemoryStore.profiles.set(x.id, x));
+    }
+    // Always preserve default admin and staff operational profiles
+    inMemoryStore.profiles.set('admin-default', {
+      id: 'admin-default',
+      email: 'admin@saraswatisweets.in',
+      phone: '+919161110030',
+      full_name: 'Shop Owner (Admin)',
+      role: 'ADMIN',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    inMemoryStore.profiles.set('staff-default', {
+      id: 'staff-default',
+      email: 'staff@saraswatisweets.in',
+      phone: '+919450012346',
+      full_name: 'Store Counter Staff',
+      role: 'STAFF',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
     if (addrs.data) { inMemoryStore.addresses.clear(); addrs.data.forEach(x => inMemoryStore.addresses.set(x.id, x)); }
     if (pays.data) { inMemoryStore.payments.clear(); pays.data.forEach(x => inMemoryStore.payments.set(x.id, x)); }
     if (revs.data) { inMemoryStore.reviews.clear(); revs.data.forEach(x => inMemoryStore.reviews.set(x.id, x)); }

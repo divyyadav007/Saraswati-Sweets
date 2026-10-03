@@ -111,7 +111,19 @@ router.post('/demo-login', async (req, res) => {
   if (email && password) {
     // Admin / Staff login
     if (email === 'admin@saraswatisweets.in' || email.includes('admin')) {
-      const adminProfile = inMemoryStore.profiles.get('admin-default')!;
+      let adminProfile = inMemoryStore.profiles.get('admin-default');
+      if (!adminProfile) {
+        adminProfile = {
+          id: 'admin-default',
+          email: 'admin@saraswatisweets.in',
+          phone: '+919161110030',
+          full_name: 'Shop Owner (Admin)',
+          role: 'ADMIN',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        inMemoryStore.profiles.set('admin-default', adminProfile);
+      }
       const token = 'demo-admin-token';
       res.json({
         success: true,
@@ -120,7 +132,19 @@ router.post('/demo-login', async (req, res) => {
       });
       return;
     } else if (email === 'staff@saraswatisweets.in' || email.includes('staff')) {
-      const staffProfile = inMemoryStore.profiles.get('staff-default')!;
+      let staffProfile = inMemoryStore.profiles.get('staff-default');
+      if (!staffProfile) {
+        staffProfile = {
+          id: 'staff-default',
+          email: 'staff@saraswatisweets.in',
+          phone: '+919450012346',
+          full_name: 'Store Counter Staff',
+          role: 'STAFF',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        inMemoryStore.profiles.set('staff-default', staffProfile);
+      }
       const token = 'demo-staff-token';
       res.json({
         success: true,
