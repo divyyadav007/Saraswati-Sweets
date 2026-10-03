@@ -696,7 +696,7 @@ export interface ServerOrder {
   total_amount: number;
   status: OrderStatus;
   payment_method: 'COD' | 'ONLINE';
-  payment_status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  payment_status: 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
   razorpay_refund_id?: string;

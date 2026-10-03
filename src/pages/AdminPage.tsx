@@ -1473,7 +1473,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onGoToLogin
             <div className="divide-y divide-[#E8DFD2]">
               {filteredOrders.map((order) => {
                 const status = order.status;
-                const isPaidOnline = order.payment_method === 'ONLINE' && order.payment_status === 'COMPLETED';
+                const isPaidOnline = order.payment_method === 'ONLINE' && order.payment_status === 'CAPTURED';
 
                 return (
                   <div key={order.id} className="py-4 space-y-3">
@@ -1504,7 +1504,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onGoToLogin
                               : 'bg-stone-100 text-stone-700'
                           }`}
                         >
-                          {order.payment_method} • {order.payment_status}
+                          {order.payment_method} • {order.payment_status === 'CAPTURED' ? 'COMPLETED' : order.payment_status}
                         </span>
 
                         <span className="text-xs text-[#6B6258]">

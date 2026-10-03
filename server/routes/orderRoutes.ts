@@ -682,7 +682,7 @@ router.patch('/orders/:id/status', async (req: AuthenticatedRequest, res: Respon
   else if (nextStatus === 'OUT_FOR_DELIVERY') order.out_for_delivery_at = nowIso;
   else if (nextStatus === 'DELIVERED') {
     order.delivered_at = nowIso;
-    order.payment_status = 'COMPLETED';
+    order.payment_status = 'CAPTURED';
   } else if (nextStatus === 'CANCELLED') {
     order.cancelled_at = nowIso;
     // Release delivery slot booked_count
@@ -709,7 +709,7 @@ router.patch('/orders/:id/status', async (req: AuthenticatedRequest, res: Respon
   else if (nextStatus === 'OUT_FOR_DELIVERY') updates.out_for_delivery_at = nowIso;
   else if (nextStatus === 'DELIVERED') {
     updates.delivered_at = nowIso;
-    updates.payment_status = 'COMPLETED';
+    updates.payment_status = 'CAPTURED';
   } else if (nextStatus === 'CANCELLED') {
     updates.cancelled_at = nowIso;
   }

@@ -722,7 +722,7 @@ router.post('/orders/:id/refund', requireRole(['ADMIN']), async (req: Authentica
     return;
   }
 
-  if (order.payment_method !== 'ONLINE' || order.payment_status !== 'COMPLETED' || !order.razorpay_payment_id) {
+  if (order.payment_method !== 'ONLINE' || order.payment_status !== 'CAPTURED' || !order.razorpay_payment_id) {
     res.status(400).json({
       error: 'ORDER_NOT_REFUNDABLE',
       message: 'Only successfully paid online orders can be refunded.',

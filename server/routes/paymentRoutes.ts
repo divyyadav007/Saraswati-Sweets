@@ -72,7 +72,7 @@ router.post('/verify', async (req: Request, res: Response) => {
   }
 
   // 3. Idempotent check: if already verified and marked completed
-  if (order.payment_status === 'COMPLETED' && order.status !== 'PENDING_PAYMENT') {
+  if (order.payment_status === 'CAPTURED' && order.status !== 'PENDING_PAYMENT') {
     res.status(200).json({
       success: true,
       idempotent: true,
@@ -85,7 +85,7 @@ router.post('/verify', async (req: Request, res: Response) => {
   // 4. Update order status to PLACED and mark payment COMPLETED
   const nowIso = new Date().toISOString();
   order.status = 'PLACED';
-  order.payment_status = 'COMPLETED';
+  order.payment_status = 'CAPTURED';
   order.razorpay_payment_id = razorpay_payment_id;
   order.paid_at = nowIso;
   order.updated_at = nowIso;
@@ -184,9 +184,9 @@ router.post('/webhook/razorpay', async (req: Request, res: Response) => {
     }
 
     if (order) {
-      if (order.status === 'PENDING_PAYMENT' || order.payment_status !== 'COMPLETED') {
+      if (order.status === 'PENDING_PAYMENT' || order.payment_status !== 'CAPTURED') {
         order.status = 'PLACED';
-        order.payment_status = 'COMPLETED';
+        order.payment_status = 'CAPTURED';
         order.razorpay_payment_id = paymentId;
         order.paid_at = nowIso;
         order.updated_at = nowIso;
