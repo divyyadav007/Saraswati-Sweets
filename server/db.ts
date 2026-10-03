@@ -493,7 +493,7 @@ export interface ServerDeliverySlot {
   capacity: number;
   booked_count: number;
   cutoff_at: string; // ISO string
-  is_active: boolean;
+  status: string;
 }
 
 export interface ServerCoupon {
@@ -765,7 +765,7 @@ function generateInitialSlots(): Map<string, ServerDeliverySlot> {
         capacity: 30,
         booked_count: i === 0 && idx === 0 ? 30 : (i * 3 + idx) % 7, // Demo slot 1 full to test disabled UI
         cutoff_at: cutoffDate.toISOString(),
-        is_active: true,
+        status: 'ACTIVE',
       });
     });
   }

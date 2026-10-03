@@ -26,7 +26,7 @@ const router = Router();
 router.get('/delivery-slots', (_req, res) => {
   const now = new Date();
   const slots = Array.from(inMemoryStore.deliverySlots.values())
-    .filter((s) => s.is_active)
+    .filter((s) => s.status === "ACTIVE")
     .sort((a, b) => {
       if (a.slot_date !== b.slot_date) return a.slot_date.localeCompare(b.slot_date);
       return a.start_time.localeCompare(b.start_time);
@@ -35,7 +35,7 @@ router.get('/delivery-slots', (_req, res) => {
       const isPastCutoff = now > new Date(s.cutoff_at);
       const isFull = s.booked_count >= s.capacity;
       return {
-        ...s,
+        ...s, is_active: s.status === "ACTIVE",
         isPastCutoff,
         isFull,
         isAvailable: !isPastCutoff && !isFull,
@@ -79,7 +79,7 @@ router.post(
           capacity: Number(capacity) || 30,
           booked_count: 0,
           cutoff_at: cutoffDate.toISOString(),
-          is_active: true,
+          status: "ACTIVE",
         };
 
         inMemoryStore.deliverySlots.set(slotId, slot);
@@ -185,7 +185,7 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
   }
 
   const slot = inMemoryStore.deliverySlots.get(slot_id);
-  if (!slot || !slot.is_active) {
+  if (!slot || slot.status !== "ACTIVE") {
     res.status(400).json({
       error: 'INVALID_SLOT',
       message: 'Selected delivery slot is invalid or inactive.',

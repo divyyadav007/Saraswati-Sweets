@@ -951,7 +951,7 @@ router.patch('/delivery-slots/:id', requireRole(['ADMIN']), async (req: Authenti
   }
 
   if (updates.capacity !== undefined) slot.capacity = updates.capacity;
-  if (updates.is_active !== undefined) slot.is_active = updates.is_active;
+  if (updates.status !== undefined) slot.status = updates.status;
   Map.prototype.set.call(inMemoryStore.deliverySlots, id, slot);
   res.json({ success: true, slot });
 });
