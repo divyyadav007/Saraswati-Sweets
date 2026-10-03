@@ -344,14 +344,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onGoToLogin
     loadAllAdminData();
   }, [isAuthenticated, isStaff]);
 
-  // 2. LIVE POLLING: Orders screen polls every 20 seconds
+  // 2. LIVE POLLING: Orders screen polls every 60 seconds, only when tab is visible
   useEffect(() => {
     if (!isAuthenticated || !isStaff) return;
 
     const interval = setInterval(() => {
-      // Background poll orders & metrics without showing full screen loader
-      loadAllAdminData(true);
-    }, 20000);
+      if (document.visibilityState === 'visible') {
+        // Background poll orders & metrics without showing full screen loader
+        loadAllAdminData(true);
+      }
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [isAuthenticated, isStaff, isAdmin]);
