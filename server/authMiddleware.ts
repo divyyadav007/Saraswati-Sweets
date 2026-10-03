@@ -23,7 +23,7 @@ export async function authenticateToken(
 
   try {
     // 1. If real Supabase is configured, verify JWT with Supabase Auth
-    if (isLiveSupabase && supabaseServer) {
+    if (isLiveSupabase && supabaseServer && token.split('.').length === 3 && token.startsWith('eyJ')) {
       const { data: { user }, error } = await supabaseServer.auth.getUser(token);
       if (!error && user) {
         // Fetch or sync profile
