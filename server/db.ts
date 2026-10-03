@@ -1137,15 +1137,15 @@ export const inMemoryStore = {
   storeSettings: {
     store_name: 'Saraswati Sweets',
     tagline: 'Pure Desi Ghee Mithai & Artisanal Namkeen Since 1978',
-    phone: '+91 91611 10030',
+    store_phone: '+91 91611 10030',
     whatsapp: '+91 91611 10030',
-    email: 'order@saraswatisweets.in',
-    address: 'Saraswati Sweets, Indira Market, Begum Gunj, Barabanki, Uttar Pradesh 225001, Uttar Pradesh 225001',
+    store_email: 'order@saraswatisweets.in',
+    address_text: 'Saraswati Sweets, Indira Market, Begum Gunj, Barabanki, Uttar Pradesh 225001, Uttar Pradesh 225001',
     serviceable_pincodes: ['225001', '225002', '225003', '225122'],
-    delivery_charge: 40,
-    free_delivery_threshold: 499,
-    cod_max_limit: 2000,
-    tax_percent: 5,
+    delivery_charge_flat: 40,
+    free_delivery_above: 499,
+    cod_limit_amount: 2000,
+    tax_rate_percent: 5,
     opening_time: '06:30',
     closing_time: '22:00',
     is_store_open: true,
@@ -1196,15 +1196,15 @@ export function validateCouponServer(
     return { valid: false, discount_amount: 0, error: `Coupon '${cleanCode}' has not started yet`, errorCode: 'COUPON_NOT_STARTED' };
   }
 
-  if (coupon.end_date && now > new Date(coupon.end_date).getTime()) {
+  if (coupon.valid_until && now > new Date(coupon.valid_until).getTime()) {
     return { valid: false, discount_amount: 0, error: `Coupon '${cleanCode}' has expired`, errorCode: 'COUPON_EXPIRED' };
   }
 
-  if (subtotal < coupon.min_order_amount) {
+  if (subtotal < coupon.min_order_value) {
     return {
       valid: false,
       discount_amount: 0,
-      error: `Minimum order amount of ₹${coupon.min_order_amount} required to use coupon '${cleanCode}' (current subtotal ₹${subtotal})`,
+      error: `Minimum order amount of ₹${coupon.min_order_value} required to use coupon '${cleanCode}' (current subtotal ₹${subtotal})`,
       errorCode: 'MIN_ORDER_NOT_MET',
     };
   }
@@ -1223,7 +1223,7 @@ export function validateCouponServer(
   if (coupon.per_user_limit) {
     const userUsageCount = inMemoryStore.couponUsage.filter((usage) => {
       if (usage.coupon_code !== cleanCode) return false;
-      const matchUser = userId && usage.profile_id === userId;
+      const matchUser = userId && usage.user_id === userId;
       const matchPhone = userPhone && usage.phone === userPhone;
       return Boolean(matchUser || matchPhone);
     }).length;
@@ -1240,10 +1240,10 @@ export function validateCouponServer(
 
   // Calculate discount
   let discount = 0;
-  if (coupon.discount_type === 'FLAT') {
-    discount = Math.min(coupon.discount_value, subtotal);
-  } else if (coupon.discount_type === 'PERCENTAGE') {
-    const calculated = (subtotal * coupon.discount_value) / 100;
+  if (coupon.type === 'FLAT') {
+    discount = Math.min(coupon.value, subtotal);
+  } else if (coupon.type === 'PERCENTAGE') {
+    const calculated = (subtotal * coupon.value) / 100;
     discount = coupon.max_discount_amount ? Math.min(coupon.max_discount_amount, calculated) : calculated;
   }
 

@@ -19,6 +19,7 @@ import {
   OrderStatus,
   VALID_ORDER_TRANSITIONS,
   saveStoreState,
+  loadStoreState,
   isLiveSupabase,
   supabaseServer,
 } from '../db';
@@ -234,6 +235,7 @@ router.post('/categories', requireRole(['ADMIN']), async (req: AuthenticatedRequ
 
   logAuditEvent(req.user, 'CATEGORY_CREATED', 'CATEGORY', id, { name: row.name, slug });
   res.status(201).json({ success: true, category: newCat });
+  loadStoreState().catch(err => console.error('[Cache Refresh Error]', err));
 });
 
 router.put('/categories/:id', requireRole(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
@@ -271,6 +273,7 @@ router.put('/categories/:id', requireRole(['ADMIN']), async (req: AuthenticatedR
     display_order: updates.display_order,
   });
   res.json({ success: true, category: cat });
+  loadStoreState().catch(err => console.error('[Cache Refresh Error]', err));
 });
 
 router.delete('/categories/:id', requireRole(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
@@ -418,6 +421,7 @@ router.post('/products', requireRole(['ADMIN']), async (req: AuthenticatedReques
 
   logAuditEvent(req.user, 'PRODUCT_CREATED', 'PRODUCT', id, { name: productRow.name, category_id, variantsCount: createdVariants.length });
   res.status(201).json({ success: true, product: { ...newProd, variants: createdVariants } });
+  loadStoreState().catch(err => console.error('[Cache Refresh Error]', err));
 });
 
 router.put('/products/:id', requireRole(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
@@ -485,6 +489,7 @@ router.put('/products/:id', requireRole(['ADMIN']), async (req: AuthenticatedReq
     category_id: updates.category_id,
   });
   res.json({ success: true, product: prod });
+  loadStoreState().catch(err => console.error('[Cache Refresh Error]', err));
 });
 
 router.delete('/products/:id', requireRole(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
@@ -538,8 +543,8 @@ router.post('/products/:id/variants', requireRole(['ADMIN']), async (req: Authen
     return;
   }
 
-  const { label, weightGrams, hamper_price, mrp, stockQuantity = 50 } = req.body;
-  if (!label || !price) {
+  const { label, weightGrams, price: hamper_price, mrp, stockQuantity = 50 } = req.body;
+  if (!label || !hamper_price) {
     res.status(400).json({ error: 'MISSING_FIELDS', message: 'Variant label and price are required.' });
     return;
   }
@@ -853,7 +858,7 @@ router.post('/delivery-partners', requireRole(['ADMIN']), async (req: Authentica
   if (!assertSupabase(res)) return;
 
   const { name, store_phone, vehicle_number } = req.body;
-  if (!name || !phone) {
+  if (!name || !store_phone) {
     res.status(400).json({ error: 'MISSING_FIELDS', message: 'Partner name and phone are required.' });
     return;
   }
@@ -982,7 +987,7 @@ router.put('/store/settings', requireRole(['ADMIN']), async (req: AuthenticatedR
   if (opening_time !== undefined) updates.opening_time = String(opening_time);
   if (closing_time !== undefined) updates.closing_time = String(closing_time);
   if (is_store_open !== undefined) updates.is_store_open = Boolean(is_store_open);
-  if (serviceable_pincodes !== undefined) updates.serviceable_pincodes = Array.isArray(allowed_pincodes) ? allowed_pincodes : String(serviceable_pincodes).split(',').map(p => p.trim());
+  if (serviceable_pincodes !== undefined) updates.serviceable_pincodes = Array.isArray(serviceable_pincodes) ? serviceable_pincodes : String(serviceable_pincodes).split(',').map(p => p.trim());
 
   const { error } = await supabaseServer!.from('store_settings').update(updates).eq('id', 1);
   if (error) {
@@ -1000,6 +1005,7 @@ router.put('/store/settings', requireRole(['ADMIN']), async (req: AuthenticatedR
   });
 
   res.json({ success: true, message: 'Store settings updated successfully.', settings: inMemoryStore.storeSettings });
+  loadStoreState().catch(err => console.error('[Cache Refresh Error]', err));
 });
 
 // ==========================================================
@@ -1029,7 +1035,7 @@ router.post('/coupons', requireRole(['ADMIN']), async (req: AuthenticatedRequest
     is_active = true, start_date, valid_until,
   } = req.body;
 
-  if (!code || !discount_value) {
+  if (!code || !value) {
     res.status(400).json({ error: 'MISSING_FIELDS', message: 'Coupon code and discount value are required.' });
     return;
   }
@@ -1041,16 +1047,16 @@ router.post('/coupons', requireRole(['ADMIN']), async (req: AuthenticatedRequest
     id,
     code: cleanCode,
     description: String(description).trim(),
-    type: discount_type === 'PERCENTAGE' ? 'PERCENTAGE' : 'FLAT',
-    value: Number(discount_value),
-    min_order_value: Number(min_order_amount) || 0,
+    type: type === 'PERCENTAGE' ? 'PERCENTAGE' : 'FLAT',
+    value: Number(value),
+    min_order_value: Number(min_order_value) || 0,
     max_discount_amount: max_discount_amount ? Number(max_discount_amount) : null,
     usage_limit_total: total_limit ? Number(total_limit) : null,
-    usage_limit_per_user: per_user_limit ? Number(per_user_limit) : 1,
+    usage_limit_per_user: usage_limit_per_user ? Number(usage_limit_per_user) : 1,
     usage_count: 0,
     is_active: Boolean(is_active),
     start_date: start_date || new Date().toISOString(),
-    valid_until: end_date || new Date(Date.now() + 180 * 86400000).toISOString(),
+    valid_until: valid_until || new Date(Date.now() + 180 * 86400000).toISOString(),
   };
 
   const { error } = await supabaseServer!.from('coupons').insert([row]);
@@ -1061,16 +1067,16 @@ router.post('/coupons', requireRole(['ADMIN']), async (req: AuthenticatedRequest
   }
 
   const newCoupon: ServerCoupon = {
-    id, code: cleanCode, description: row.description, type: row.discount_type as any,
-    value: row.discount_value, min_order_value: row.min_order_amount,
-    max_discount_amount: row.max_discount_amount ?? undefined, total_limit: row.usage_limit ?? undefined,
-    usage_limit_per_user: row.per_user_limit ?? undefined, used_count: 0, is_active: row.is_active,
-    start_date: row.start_date, valid_until: row.end_date,
+    id, code: cleanCode, description: row.description, type: row.type as any,
+    value: row.value, min_order_value: row.min_order_value,
+    max_discount_amount: row.max_discount_amount ?? undefined, total_limit: row.usage_limit_total ?? undefined,
+    per_user_limit: row.usage_limit_per_user ?? undefined, used_count: 0, is_active: row.is_active,
+    start_date: row.start_date, valid_until: row.valid_until,
   };
   Map.prototype.set.call(inMemoryStore.coupons, cleanCode, newCoupon);
 
   logAuditEvent(req.user, 'COUPON_CREATED', 'COUPON', id, {
-    code: cleanCode, type: row.discount_type, value: row.discount_value, min_order_value: row.min_order_amount,
+    code: cleanCode, type: row.type, value: row.value, min_order_value: row.min_order_value,
   });
   res.status(201).json({ success: true, coupon: newCoupon });
 });
@@ -1088,14 +1094,14 @@ router.put('/coupons/:id', requireRole(['ADMIN']), async (req: AuthenticatedRequ
   const { description, type, value, min_order_value, max_discount_amount, total_limit, usage_limit_per_user, is_active, valid_until } = req.body;
   const updates: Record<string, any> = {};
   if (description !== undefined) updates.description = String(description).trim();
-  if (discount_type !== undefined) updates.type = discount_type;
-  if (discount_value !== undefined) updates.value = Number(discount_value);
-  if (min_order_amount !== undefined) updates.min_order_value = Number(min_order_amount);
+  if (type !== undefined) updates.type = type;
+  if (value !== undefined) updates.value = Number(value);
+  if (min_order_value !== undefined) updates.min_order_value = Number(min_order_value);
   if (max_discount_amount !== undefined) updates.max_discount_amount = max_discount_amount ? Number(max_discount_amount) : null;
   if (total_limit !== undefined) updates.usage_limit_total = total_limit ? Number(total_limit) : null;
-  if (per_user_limit !== undefined) updates.usage_limit_per_user = per_user_limit ? Number(per_user_limit) : null;
+  if (usage_limit_per_user !== undefined) updates.usage_limit_per_user = usage_limit_per_user ? Number(usage_limit_per_user) : null;
   if (is_active !== undefined) updates.is_active = Boolean(is_active);
-  if (end_date !== undefined) updates.valid_until = end_date;
+  if (valid_until !== undefined) updates.valid_until = valid_until;
 
   const { error } = await supabaseServer!.from('coupons').update(updates).eq('id', coupon.id);
   if (error) {
@@ -1367,7 +1373,7 @@ router.post('/hampers', requireRole(['ADMIN']), async (req: AuthenticatedRequest
   if (!assertSupabase(res)) return;
 
   const { name, description = '', image_url, box_type = 'Royal Velvet Trunk', hamper_price, mrp, is_featured = false, is_active = true, display_order = 1, items_included = [] } = req.body;
-  if (!name || !price || !image_url) {
+  if (!name || !hamper_price || !image_url) {
     res.status(400).json({ error: 'MISSING_FIELDS', message: 'Hamper name, price, and image URL are required.' });
     return;
   }

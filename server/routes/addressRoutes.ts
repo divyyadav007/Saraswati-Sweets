@@ -45,8 +45,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
   const {
     label = 'Home',
     recipient_name,
-    recipient_store_phone,
-    street_address_text,
+    recipient_phone,
+    street_address,
     landmark,
     city = 'Barabanki',
     state = 'Uttar Pradesh',
@@ -137,8 +137,8 @@ router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response)
   const {
     label,
     recipient_name,
-    recipient_store_phone,
-    street_address_text,
+    recipient_phone,
+    street_address,
     landmark,
     city,
     state,

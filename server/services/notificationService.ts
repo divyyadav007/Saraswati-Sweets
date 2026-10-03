@@ -189,16 +189,16 @@ export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
   const customerEmail =
     order.address_snapshot.recipient_phone ? `${order.address_snapshot.recipient_phone}@sms.saraswatisweets.in` : undefined;
   const targetEmail = order.guest_email || customerEmail || 'customer@saraswatisweets.in';
-  const targetUserId = order.profile_id || order.guest_phone || order.address_snapshot.recipient_phone;
+  const targetUserId = order.user_id || order.guest_phone || order.address_snapshot.recipient_phone;
 
   // In-app notification for Customer
   if (targetUserId) {
     addInAppNotification({
       userId: targetUserId,
       title: `Order #${order.order_number} Placed!`,
-      message: `Your fresh mithai order of ₹${order.total} has been confirmed for delivery on ${order.slot_snapshot.slot_date} (${order.slot_snapshot.start_time} - ${order.slot_snapshot.end_time}).`,
+      message: `Your fresh mithai order of ₹${order.total_amount} has been confirmed for delivery on ${order.slot_snapshot.slot_date} (${order.slot_snapshot.start_time} - ${order.slot_snapshot.end_time}).`,
       type: 'ORDER_PLACED',
-      metadata: { orderId: order.id, orderNumber: order.order_number, total: order.total },
+      metadata: { orderId: order.id, orderNumber: order.order_number, total: order.total_amount },
     });
   }
 
@@ -206,9 +206,9 @@ export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
   addInAppNotification({
     userId: 'ADMIN',
     title: `New Order Received: #${order.order_number}`,
-    message: `₹${order.total} (${order.payment_method}) from ${order.address_snapshot.recipient_name} (${order.address_snapshot.recipient_phone}). Window: ${order.slot_snapshot.slot_date} ${order.slot_snapshot.start_time}`,
+    message: `₹${order.total_amount} (${order.payment_method}) from ${order.address_snapshot.recipient_name} (${order.address_snapshot.recipient_phone}). Window: ${order.slot_snapshot.slot_date} ${order.slot_snapshot.start_time}`,
     type: 'ORDER_PLACED',
-    metadata: { orderId: order.id, orderNumber: order.order_number, total: order.total },
+    metadata: { orderId: order.id, orderNumber: order.order_number, total: order.total_amount },
   });
 
   // Transactional Email to Customer
@@ -259,14 +259,14 @@ export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
               ${itemsHtml}
             </tbody>
             <tfoot>
-              ${order.discount > 0 ? `<tr><td colspan="2" style="padding: 8px; text-align: right; color: #2E7D4F;">Discount (${order.coupon_code || 'Promo'}):</td><td style="padding: 8px; text-align: right; color: #2E7D4F;">-₹${order.discount}</td></tr>` : ''}
+              ${order.discount_amount > 0 ? `<tr><td colspan="2" style="padding: 8px; text-align: right; color: #2E7D4F;">Discount (${order.coupon_code || 'Promo'}):</td><td style="padding: 8px; text-align: right; color: #2E7D4F;">-₹${order.discount_amount}</td></tr>` : ''}
               <tr>
                 <td colspan="2" style="padding: 8px; text-align: right; font-weight: bold;">Grand Total:</td>
-                <td style="padding: 8px; text-align: right; font-weight: bold; font-size: 16px; color: #8A1538;">₹${order.total}</td>
+                <td style="padding: 8px; text-align: right; font-weight: bold; font-size: 16px; color: #8A1538;">₹${order.total_amount}</td>
               </tr>
             </tfoot>
           </table>
-          <p style="font-size: 13px; color: #6b6258;">Need assistance? Call our Barabanki shop at ${STORE_SETTINGS.phone} or WhatsApp ${STORE_SETTINGS.whatsapp}.</p>
+          <p style="font-size: 13px; color: #6b6258;">Need assistance? Call our Barabanki shop at ${STORE_SETTINGS.store_phone} or WhatsApp ${STORE_SETTINGS.whatsapp}.</p>
         </div>
       </div>
     `,
@@ -274,8 +274,8 @@ export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
 
   // Transactional Email to Store Owner
   await emailProvider.sendEmail({
-    to: STORE_SETTINGS.email || 'order@saraswatisweets.in',
-    subject: `[NEW ORDER ALERT] #${order.order_number} - ₹${order.total} (${order.payment_method})`,
+    to: STORE_SETTINGS.store_email || 'order@saraswatisweets.in',
+    subject: `[NEW ORDER ALERT] #${order.order_number} - ₹${order.total_amount} (${order.payment_method})`,
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h2>New Order Received: #${order.order_number}</h2>
@@ -286,7 +286,7 @@ export async function notifyOrderPlaced(order: ServerOrder): Promise<void> {
         <ul>
           ${order.items.map((i) => `<li>${i.product_name} (${i.variant_label}) x ${i.quantity} = ₹${i.total_price}</li>`).join('')}
         </ul>
-        <p><strong>Order Total:</strong> ₹${order.total} [${order.payment_method} / ${order.payment_status}]</p>
+        <p><strong>Order Total:</strong> ₹${order.total_amount} [${order.payment_method} / ${order.payment_status}]</p>
       </div>
     `,
   });
@@ -300,7 +300,7 @@ export async function notifyOrderStatusChanged(
   previousStatus: string,
   newStatus: string
 ): Promise<void> {
-  const targetUserId = order.profile_id || order.guest_phone || order.address_snapshot.recipient_phone;
+  const targetUserId = order.user_id || order.guest_phone || order.address_snapshot.recipient_phone;
   const targetEmail = order.guest_email || 'customer@saraswatisweets.in';
 
   const statusLabels: Record<string, string> = {
@@ -353,7 +353,7 @@ export async function notifyOrderStatusChanged(
  * 3. Notify Payment Failed (to Customer)
  */
 export async function notifyPaymentFailed(order: ServerOrder, reason?: string): Promise<void> {
-  const targetUserId = order.profile_id || order.guest_phone || order.address_snapshot.recipient_phone;
+  const targetUserId = order.user_id || order.guest_phone || order.address_snapshot.recipient_phone;
   const targetEmail = order.guest_email || 'customer@saraswatisweets.in';
 
   if (targetUserId) {
@@ -373,9 +373,9 @@ export async function notifyPaymentFailed(order: ServerOrder, reason?: string): 
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e8dfd2; border-radius: 8px;">
         <h2 style="color: #B3261E;">Payment Could Not Be Completed</h2>
         <p>Dear ${order.address_snapshot.recipient_name},</p>
-        <p>We noticed your online payment of ₹${order.total} for order <strong>#${order.order_number}</strong> was not completed (${reason || 'Payment failed'}).</p>
+        <p>We noticed your online payment of ₹${order.total_amount} for order <strong>#${order.order_number}</strong> was not completed (${reason || 'Payment failed'}).</p>
         <p>Your selected delivery slot (${order.slot_snapshot.slot_date} ${order.slot_snapshot.start_time}) is reserved for 15 minutes. You can retry paying online or choose Cash on Delivery.</p>
-        <p>If you need assistance, please call our Barabanki counter at ${STORE_SETTINGS.phone}.</p>
+        <p>If you need assistance, please call our Barabanki counter at ${STORE_SETTINGS.store_phone}.</p>
       </div>
     `,
   });
@@ -396,7 +396,7 @@ export async function notifyNewBulkEnquiry(enquiry: ServerBulkEnquiry): Promise<
 
   // Email to Store Owner
   await emailProvider.sendEmail({
-    to: STORE_SETTINGS.email || 'order@saraswatisweets.in',
+    to: STORE_SETTINGS.store_email || 'order@saraswatisweets.in',
     subject: `[NEW BULK ENQUIRY] ${enquiry.event_type} - ${enquiry.contact_name} (${enquiry.phone})`,
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
@@ -427,7 +427,7 @@ export async function notifyNewBulkEnquiry(enquiry: ServerBulkEnquiry): Promise<
           <p>Thank you for reaching out to Saraswati Sweets (Barabanki) for your upcoming <strong>${enquiry.event_type}</strong> celebration on <strong>${enquiry.event_date}</strong>.</p>
           <p>Our senior order coordinator has received your enquiry (Ref: <strong>${enquiry.enquiry_number}</strong>) and will call you on <strong>${enquiry.phone}</strong> with wholesale bulk rates, custom box packaging choices, and complimentary sample tasting options.</p>
           <p>We look forward to sweetening your auspicious occasion with 100% pure cow desi ghee craftsmanship.</p>
-          <p style="margin-top: 20px; font-size: 13px; color: #6B6258;">Saraswati Sweets • Saraswati Sweets, Indira Market, Begum Gunj, Barabanki, Uttar Pradesh 225001 • Tel: ${STORE_SETTINGS.phone}</p>
+          <p style="margin-top: 20px; font-size: 13px; color: #6B6258;">Saraswati Sweets • Saraswati Sweets, Indira Market, Begum Gunj, Barabanki, Uttar Pradesh 225001 • Tel: ${STORE_SETTINGS.store_phone}</p>
         </div>
       `,
     });

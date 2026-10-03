@@ -238,7 +238,7 @@ router.get(
     // Search user's orders for status === 'DELIVERED' and item matching productId
     const deliveredOrders = Array.from(inMemoryStore.orders.values()).filter((order) => {
       const isUserOrder =
-        order.profile_id === user.id ||
+        order.user_id === user.id ||
         (user.phone && order.guest_phone === user.phone) ||
         (user.email && order.guest_email === user.email);
 
@@ -307,7 +307,7 @@ router.post(
     // STRICT CHECK: DELIVERED order check
     const deliveredOrder = Array.from(inMemoryStore.orders.values()).find((order) => {
       const isUserOrder =
-        order.profile_id === user.id ||
+        order.user_id === user.id ||
         (user.phone && order.guest_phone === user.phone) ||
         (user.email && order.guest_email === user.email);
 

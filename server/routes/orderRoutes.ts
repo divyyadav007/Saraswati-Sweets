@@ -328,13 +328,13 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
       return;
     }
 
-    discount = couponRes.discount;
+    discount = couponRes.discount_amount;
     appliedCouponCode = couponRes.coupon!.code;
     validatedCouponObj = couponRes.coupon;
   }
 
   // 7. Calculate Delivery & Tax
-  const isFreeDelivery = subtotal >= STORE_SETTINGS.free_delivery_threshold;
+  const isFreeDelivery = subtotal >= STORE_SETTINGS.free_delivery_above;
   const deliveryCharge = isFreeDelivery ? 0 : STORE_SETTINGS.delivery_charge;
   const tax = 0; // Inclusive in MRP per sweets standard in UP
   const total = Math.max(0, subtotal - discount + deliveryCharge + tax);
@@ -344,11 +344,11 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
 
   if (!isOnlinePayment) {
     // COD Limit Check
-    if (total > STORE_SETTINGS.cod_max_limit) {
+    if (total > STORE_SETTINGS.cod_limit_amount) {
       res.status(400).json({
         error: 'COD_LIMIT_EXCEEDED',
-        message: `Cash on Delivery is allowed only for orders up to ₹${STORE_SETTINGS.cod_max_limit}. Your order total is ₹${total}. Please pay online.`,
-        codMaxLimit: STORE_SETTINGS.cod_max_limit,
+        message: `Cash on Delivery is allowed only for orders up to ₹${STORE_SETTINGS.cod_limit_amount}. Your order total is ₹${total}. Please pay online.`,
+        codMaxLimit: STORE_SETTINGS.cod_limit_amount,
         total,
       });
       return;
@@ -367,7 +367,6 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
   const newOrder: ServerOrder = {
     id: orderId,
     order_number: orderNumber,
-    profile_id: verifiedUserId,
     user_id: verifiedUserId,
     guest_phone: req.user.phone || address?.recipient_phone || undefined,
     guest_email: req.user.email || undefined,
@@ -383,11 +382,11 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
       end_time: slot.end_time,
     },
     subtotal,
-    discount,
+    discount_amount: discount,
     coupon_code: appliedCouponCode,
-    delivery_charge: deliveryCharge,
-    tax,
-    total,
+    delivery_charge_flat: deliveryCharge,
+    tax_amount: tax,
+    total_amount: total,
     status: initialStatus,
     payment_method: isOnlinePayment ? 'ONLINE' : 'COD',
     payment_status: 'PENDING',
@@ -447,7 +446,7 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
       coupon_id: validatedCouponObj.id,
       coupon_code: appliedCouponCode,
       order_id: orderId,
-      profile_id: verifiedUserId,
+      user_id: verifiedUserId,
       phone: address.recipient_phone,
       discount_amount: discount,
       created_at: nowIso,
@@ -469,18 +468,18 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
   const orderRow = {
     id: orderId,
     order_number: orderNumber,
-    profile_id: verifiedUserId,
+    user_id: verifiedUserId,
     guest_phone: newOrder.guest_phone,
     guest_email: newOrder.guest_email,
     address_snapshot: newOrder.address_snapshot,
     slot_id: slot.id,
     slot_snapshot: newOrder.slot_snapshot,
     subtotal: newOrder.subtotal,
-    discount: newOrder.discount,
+    discount_amount: newOrder.discount_amount,
     coupon_code: newOrder.coupon_code,
-    delivery_charge: newOrder.delivery_charge,
-    tax: newOrder.tax,
-    total: newOrder.total,
+    delivery_charge_flat: newOrder.delivery_charge_flat,
+    tax_amount: newOrder.tax_amount,
+    total_amount: newOrder.total_amount,
     status: newOrder.status,
     payment_method: newOrder.payment_method,
     payment_status: newOrder.payment_status,
@@ -554,7 +553,7 @@ router.get('/orders', requireAuth, (req: AuthenticatedRequest, res: Response) =>
   const userOrders = isStaffOrAdmin
     ? allOrders
     : allOrders.filter((o) => {
-        if (o.profile_id === user.id || (o as any).user_id === user.id) return true;
+        if (o.user_id === user.id) return true;
         if (userCleanPhone) {
           if (false || false) return true;
           const guestPhone = (o.guest_phone || '').replace(/\D/g, '').slice(-10);
@@ -596,7 +595,7 @@ router.get('/orders/:orderNumber', (req: AuthenticatedRequest, res: Response) =>
 
   // If user is authenticated and not staff, verify ownership
   if (req.user && req.user.role === 'CUSTOMER') {
-    if (order.profile_id && order.profile_id !== req.user.id) {
+    if (order.user_id && order.user_id !== req.user.id) {
       res.status(403).json({ error: 'FORBIDDEN', message: 'You do not have access to this order.' });
       return;
     }

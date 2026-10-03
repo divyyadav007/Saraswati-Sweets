@@ -99,17 +99,17 @@ export function computeServerCart(rawItems: CartInputItem[]) {
     });
   }
 
-  const isFreeDelivery = subtotal >= STORE_SETTINGS.free_delivery_threshold || subtotal === 0;
+  const isFreeDelivery = subtotal >= STORE_SETTINGS.free_delivery_above || subtotal === 0;
   const deliveryCharge = isFreeDelivery ? 0 : STORE_SETTINGS.delivery_charge;
   const total = subtotal + deliveryCharge;
-  const freeDeliveryShortfall = Math.max(0, STORE_SETTINGS.free_delivery_threshold - subtotal);
+  const freeDeliveryShortfall = Math.max(0, STORE_SETTINGS.free_delivery_above - subtotal);
 
   return {
     items: verifiedItems,
     subtotal,
     savings,
     deliveryCharge,
-    freeDeliveryThreshold: STORE_SETTINGS.free_delivery_threshold,
+    freeDeliveryThreshold: STORE_SETTINGS.free_delivery_above,
     freeDeliveryShortfall,
     isFreeDelivery,
     total,
@@ -284,14 +284,14 @@ router.post('/apply-coupon', async (req: AuthenticatedRequest, res: Response) =>
 
   res.json({
     success: true,
-    message: `Coupon '${result.coupon!.code}' applied successfully! Saved ₹${result.discount}.`,
+    message: `Coupon '${result.coupon!.code}' applied successfully! Saved ₹${result.discount_amount}.`,
     coupon: {
       code: result.coupon!.code,
-      discount_type: result.coupon!.discount_type,
-      discount_value: result.coupon!.discount_value,
+      discount_type: result.coupon!.type,
+      discount_value: result.coupon!.value,
       description: result.coupon!.description,
     },
-    discount: result.discount,
+    discount: result.discount_amount,
   });
 });
 
