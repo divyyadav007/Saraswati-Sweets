@@ -272,7 +272,8 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
     }
 
     // Standard Mithai Product Variant
-    const variant = MASTER_VARIANTS.find((v) => v.id === rawVariantId);
+    const variant = inMemoryStore.variants.get(rawVariantId);
+    const product = variant ? inMemoryStore.products.get(variant.productId) : null;
     if (!variant) {
       res.status(400).json({
         error: 'VARIANT_NOT_FOUND',
@@ -284,7 +285,7 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
     if (variant.stockStatus === 'OUT_OF_STOCK') {
       res.status(400).json({
         error: 'OUT_OF_STOCK',
-        message: `${variant.productName} (${variant.label}) is currently out of stock.`,
+        message: `${product?.name || variant.productName || 'Unknown Product'} (${variant.label}) is currently out of stock.`,
       });
       return;
     }
@@ -297,12 +298,12 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
       order_id: orderId,
       product_id: variant.productId,
       variant_id: variant.id,
-      product_name: variant.productName,
+      product_name: product?.name || variant.productName || 'Unknown Product',
       variant_label: variant.label,
       unit_price: variant.price,
       quantity: requestedQty,
       total_price: itemTotalPrice,
-      image_url: variant.imageUrl,
+      image_url: product?.image_url || variant.imageUrl || '',
       item_type: 'PRODUCT',
     });
   }

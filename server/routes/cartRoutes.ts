@@ -71,7 +71,8 @@ export function computeServerCart(rawItems: CartInputItem[]) {
     }
 
     // Standard Product Variant
-    const variant = MASTER_VARIANTS.find((v) => v.id === raw.variantId);
+    const variant = inMemoryStore.variants.get(raw.variantId);
+    const product = variant ? inMemoryStore.products.get(variant.productId) : null;
     if (!variant) continue;
 
     // Cap at 20 per item as required by specification
@@ -85,13 +86,13 @@ export function computeServerCart(rawItems: CartInputItem[]) {
 
     verifiedItems.push({
       productId: variant.productId,
-      productName: variant.productName,
+      productName: product?.name || variant.productName || 'Unknown Product',
       variantId: variant.id,
       variantLabel: variant.label,
       weightGrams: variant.weightGrams,
       price: variant.price,
       mrp: variant.mrp,
-      imageUrl: variant.imageUrl,
+      imageUrl: product?.image_url || variant.imageUrl || '',
       quantity: clampedQuantity,
       itemTotal,
       stockStatus: variant.stockStatus,
