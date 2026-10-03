@@ -682,7 +682,7 @@ export interface ServerOrder {
   guest_phone?: string;
   guest_email?: string;
   address_snapshot: ServerAddress;
-  slot_id: string;
+  delivery_slot_id: string;
   slot_snapshot: {
     slot_date: string;
     start_time: string;
@@ -691,7 +691,7 @@ export interface ServerOrder {
   subtotal: number;
   discount_amount: number;
   coupon_code?: string;
-  delivery_charge_flat: number;
+  delivery_charge: number;
   tax_amount: number;
   total_amount: number;
   status: OrderStatus;
@@ -1272,7 +1272,7 @@ export function expireUnpaidOrders(): number {
         order.updated_at = new Date().toISOString();
 
         // Release slot capacity
-        const slot = inMemoryStore.deliverySlots.get(order.slot_id);
+        const slot = inMemoryStore.deliverySlots.get(order.delivery_slot_id);
         if (slot && slot.booked_count > 0) {
           slot.booked_count -= 1;
           inMemoryStore.deliverySlots.set(slot.id, slot);

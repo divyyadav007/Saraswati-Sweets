@@ -376,7 +376,7 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
       city: 'Barabanki',
       state: 'Uttar Pradesh',
     },
-    slot_id: slot.id,
+    delivery_slot_id: slot.id,
     slot_snapshot: {
       slot_date: slot.slot_date,
       start_time: slot.start_time,
@@ -385,7 +385,7 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
     subtotal,
     discount_amount: discount,
     coupon_code: appliedCouponCode,
-    delivery_charge_flat: deliveryCharge,
+    delivery_charge: deliveryCharge,
     tax_amount: tax,
     total_amount: total,
     status: initialStatus,
@@ -473,12 +473,12 @@ router.post('/checkout', requireAuth, async (req: AuthenticatedRequest, res: Res
     guest_phone: newOrder.guest_phone,
     guest_email: newOrder.guest_email,
     address_snapshot: newOrder.address_snapshot,
-    slot_id: slot.id,
+    delivery_slot_id: slot.id,
     slot_snapshot: newOrder.slot_snapshot,
     subtotal: newOrder.subtotal,
     discount_amount: newOrder.discount_amount,
     coupon_code: newOrder.coupon_code,
-    delivery_charge_flat: newOrder.delivery_charge_flat,
+    delivery_charge: newOrder.delivery_charge,
     tax_amount: newOrder.tax_amount,
     total_amount: newOrder.total_amount,
     status: newOrder.status,
@@ -665,7 +665,7 @@ router.patch('/orders/:id/status', async (req: AuthenticatedRequest, res: Respon
   } else if (nextStatus === 'CANCELLED') {
     order.cancelled_at = nowIso;
     // Release delivery slot booked_count
-    const slot = inMemoryStore.deliverySlots.get(order.slot_id);
+    const slot = inMemoryStore.deliverySlots.get(order.delivery_slot_id);
     if (slot && slot.booked_count > 0) {
       slot.booked_count -= 1;
       inMemoryStore.deliverySlots.set(slot.id, slot);

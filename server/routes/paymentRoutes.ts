@@ -235,7 +235,7 @@ router.post('/webhook/razorpay', async (req: Request, res: Response) => {
         order.updated_at = nowIso;
 
         // Release slot capacity on failure
-        const slot = inMemoryStore.deliverySlots.get(order.slot_id);
+        const slot = inMemoryStore.deliverySlots.get(order.delivery_slot_id);
         if (slot && slot.booked_count > 0) {
           slot.booked_count -= 1;
           inMemoryStore.deliverySlots.set(slot.id, slot);
